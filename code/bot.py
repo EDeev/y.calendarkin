@@ -79,7 +79,11 @@ async def check_list(message: types.Message):
                 counter += 1
                 txt += message_form(counter, event[3])
 
-        await message.answer(text=txt, parse_mode=ParseMode.HTML)
+        if counter:
+            await message.answer(text=txt, parse_mode=ParseMode.HTML)
+        else:
+            await message.answer(text="<b>В данный момент</b> событий на сегодня найдено не было!",
+                                 parse_mode=ParseMode.HTML)
     else:
         await message.answer("Для отображения событий вы должны прислать ical-ссылку на календарь!")
 
@@ -228,7 +232,6 @@ async def downloading_file_ics(message: types.Message):
                 await message.answer("Время отправки уведомлений должно быть меньше 60 минут!")
 
 
-
 # ПРОВЕРКА НА СОБЫТИЕ
 async def alarm(wait_for):
     while True:
@@ -314,5 +317,5 @@ async def update(wait_for):
 if __name__ == '__main__':
     loop = asyncio.get_event_loop()
     loop.create_task(alarm(60))  # ПРОВЕРКА КАЖДУЮ 1 МИНУТУ
-    loop.create_task(update(1620))  # ПРОВЕРКА КАЖДУЮ 27 МИНУТУ
+    loop.create_task(update(780))  # ПРОВЕРКА КАЖДУЮ 13 МИНУТУ
     executor.start_polling(dp, skip_updates=True)

@@ -1,7 +1,6 @@
 from datetime import datetime, time
 import icalendar
 
-from dateutil.relativedelta import *
 from dateutil.rrule import *
 from dateutil.parser import *
 
@@ -39,21 +38,23 @@ def text_ical(user_id, tz):
             r_rule = component.get('rrule')
             if r_rule:
                 list_rrule = icalendar.vRecur.to_ical(r_rule).decode('utf-8').split(';')
+                list_rrule = [elem for elem in list_rrule if 'UNTIL' not in elem]
 
-                for i, elem in enumerate(list_rrule):
-                    if 'UNTIL' in elem:
-                        list_rrule.pop(i)
+                until = "UNTIL=" + "".join(date.date().isoformat().split("-")) + "T235900Z"
 
-                now_date = "".join(date.date().isoformat().split("-"))
-
-                until = "UNTIL=" + now_date + "T235900Z"
-                date_iso = "".join(dt_start.isoformat().split("-"))
-                time_iso = "".join(date_iso.split(":")).split("+")[0] + "Z"
                 list_rrule.append(until)
-
                 list_rrule = ";".join(list_rrule)
-                print(dt_start.date(), list(rrulestr(list_rrule, dtstart=parse(time_iso))))
 
+                date_iso = "".join(dt_start.isoformat().split("-"))
+                iso = "".join(date_iso.split(":")).split("+")[0] + "Z"
+
+                dates = list(map(lambda x: x.replace(tzinfo=None), list(rrulestr(list_rrule, dtstart=parse(iso)))))
+
+                if dates:
+                    dif = dt_end - dt_start
+
+                    dt_start = dates[-1]
+                    dt_end = dt_start + dif
 
             if date.date() == dt_start.date():
                 org = component.get("organizer")
@@ -99,50 +100,3 @@ def delta_time(d_event, start, end):
 
 def dt_now(tz):
     return datetime.now(tz=tz)
-
-
-def recur_rule(create_date, now_date, rules):
-    freq = rules['FREQ'][0]
-    inter = rules['INTERVAL'][0]
-
-    if 'UNTIL' in rules.keys():
-        until = rules['UNTIL'][0]
-        until = until if type(until) == type(now_date) else until.date()
-
-        if until < now_date: return False
-
-    count_day = now_date - create_date
-
-    print(create_date, rules)
-    print(freq, inter)
-
-    if freq == 'DAILY':
-        if count_day.days % inter == 0: return True
-
-    elif freq == 'WEEKLY':
-        weekday = now_date.strftime('%a').upper()[:2]
-        days = rules['BYDAY']
-
-        if weekday in days:
-            week = count_day.days // 7  # получаем чётность недели
-            if week % inter == 0: return True
-
-    elif freq == 'MONTHLY':
-        if 'BYMONTHDAY' in rules.keys():
-            dates = list(rrule(MONTHLY, dtstart=create_date, interval=inter,
-                               bymonthday=rules['BYMONTHDAY'][0], until=now_date))
-            if now_date in dates: return True
-        else:
-            moment = rules['BYDAY'][0][:-2]
-            day = rules['BYDAY'][0][-2:]
-
-            dates = list(rrule(MONTHLY, dtstart=create_date, interval=inter,
-                               byweekday=day(moment), until=now_date))
-            if now_date in dates: return True
-
-    elif freq == 'YEARLY':
-        dates = list(rrule(YEARLY, dtstart=create_date, interval=inter, bymonth=rules['BYMONTH'][0],
-                           bymonthday=rules['BYMONTHDAY'][0], until=now_date))
-        if now_date in dates: return True
-
-    return False
