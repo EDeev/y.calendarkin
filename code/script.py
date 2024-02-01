@@ -38,9 +38,19 @@ def text_ical(user_id, tz):
             r_rule = component.get('rrule')
             if r_rule:
                 list_rrule = icalendar.vRecur.to_ical(r_rule).decode('utf-8').split(';')
+
+                until, u_flag = [elem for elem in list_rrule if 'UNTIL' in elem], True
                 list_rrule = [elem for elem in list_rrule if 'UNTIL' not in elem]
 
-                until = "UNTIL=" + "".join(date.date().isoformat().split("-")) + "T235900Z"
+                if until:
+                    until_old = until[0].split('=')[1]
+                    until = isoparse(until_old).replace(tzinfo=None)
+
+                    if until.replace(tzinfo=None) <= date.replace(tzinfo=None):
+                        until, u_flag = "UNTIL=" + until_old, False
+
+                if u_flag:
+                    until = "UNTIL=" + "".join(date.date().isoformat().split("-")) + "T235900Z"
 
                 list_rrule.append(until)
                 list_rrule = ";".join(list_rrule)
