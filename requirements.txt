@@ -1,18 +1,5 @@
-# Core bot framework
-aiogram>=3.0.0
-
-# Calendar processing
-icalendar>=5.0.0
-python-dateutil>=2.8.0
-
-# Timezone support
-pytz>=2023.3
-
-# HTTP client for downloading calendar files
-wget>=3.2
-
-# Database (built-in with Python)
-# sqlite3 - included in Python standard library
-
-# Additional dependencies for date/time handling
-typing-extensions>=4.0.0
+aiogram==3.23.0
+aiohttp==3.13.2
+icalendar==6.3.2
+python-dateutil==2.9.0.post0
+pytz==2025.2

@@ -1,0 +1,15 @@
+services:
+  bot:
+    build: .
+    image: ghcr.io/edeev/y.calendarkin:latest
+    env_file: .env
+    environment:
+      TZ: Europe/Moscow
+    volumes:
+      - icals:/app/data/icals
+      - db:/app/db
+    restart: unless-stopped
+
+volumes:
+  icals:
+  db:
