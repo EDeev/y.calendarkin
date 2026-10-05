@@ -1,17 +1,58 @@
+import os
+import re
+from html import escape
 from datetime import datetime, time
-import icalendar
+from urllib.parse import parse_qs, urlparse
 
-from dateutil.rrule import *
-from dateutil.parser import *
+import aiohttp
+import icalendar
+import pytz
+from dateutil.parser import isoparse, parse
+from dateutil.rrule import rrulestr
+
+ICAL_DIR = "../data/icals"
+
+# только экспорт Яндекс.Календаря: произвольная ссылка позволила бы заставить бота ходить по любым
+# адресам, в том числе внутренним адресам сервера
+YANDEX_HOST = re.compile(r"^calendar\.yandex\.(ru|com|by|kz|uz|com\.tr)$")
+
+
+def parse_ical_url(url):
+    """Проверяет ссылку экспорта и возвращает часовой пояс из неё или None, если ссылка не подходит"""
+    parts = urlparse(url.strip())
+    if parts.scheme != "https" or not YANDEX_HOST.match(parts.hostname or ""):
+        return None
+
+    tz = parse_qs(parts.query).get("tz_id", ["Europe/Moscow"])[0]
+    return tz if tz in pytz.all_timezones_set else "Europe/Moscow"
+
+
+async def download_ical(url, user_id):
+    """Скачивает календарь, проверяет, что это iCal, и только потом заменяет старый файл"""
+    timeout = aiohttp.ClientTimeout(total=30)
+    async with aiohttp.ClientSession(timeout=timeout) as session:
+        async with session.get(url, allow_redirects=False) as response:
+            response.raise_for_status()
+            data = await response.read()
+
+    icalendar.Calendar.from_ical(data)  # бросит исключение, если пришёл не календарь
+
+    os.makedirs(ICAL_DIR, exist_ok=True)
+    path_new = f"{ICAL_DIR}/{user_id}_new.ics"
+    with open(path_new, "wb") as f:
+        f.write(data)
+    os.replace(path_new, f"{ICAL_DIR}/{user_id}.ics")
 
 
 def text_ical(user_id, tz):
     date = dt_now(tz)
-    path = f'../data/icals/{user_id}.ics'
+    path = f"{ICAL_DIR}/{user_id}.ics"
 
-    e = open(path, 'rb')
+    if not os.path.exists(path):
+        return []
 
-    ecal = icalendar.Calendar.from_ical(e.read())
+    with open(path, "rb") as e:
+        ecal = icalendar.Calendar.from_ical(e.read())
     events = []
 
     for i, component in enumerate(ecal.walk()):
@@ -24,7 +65,8 @@ def text_ical(user_id, tz):
             dt_start = component.decoded("dtstart")
             dt_end = component.decoded("dtend")
 
-            if len(dt) == 1:
+            all_day = len(dt) == 1
+            if all_day:
                 dt_start = datetime.combine(dt_start, time(minute=1))
                 dt_end = datetime.combine(dt_end, time(minute=1))
             else:
@@ -47,7 +89,7 @@ def text_ical(user_id, tz):
                     until = isoparse(until_old).replace(tzinfo=None)
 
                     if until.replace(tzinfo=None) <= date.replace(tzinfo=None):
-                        until, u_flag = "UNTIL=" + until_old, False
+                        until, u_flag = "UNTIL=" + until_utc(until_old, tz), False
 
                 if u_flag:
                     until = "UNTIL=" + "".join(date.date().isoformat().split("-")) + "T235900Z"
@@ -70,28 +112,52 @@ def text_ical(user_id, tz):
                 org = component.get("organizer")
                 desc = component.get("description")
 
-                event = {"name": component.get('summary'), "desc": desc if desc else "отсутствует",
-                         "org": org if org else "не назначен", "datetime": [dt_start, dt_end]}
+                event = {"name": component.get('summary'), "desc": str(desc).strip() if desc else "",
+                         "org": str(org).removeprefix("mailto:") if org else "", "all_day": all_day,
+                         "datetime": [dt_start, dt_end]}
 
                 events.append([dt_start.date(), dt_start.time(), i, event])
-    e.close()
 
     return events
+
+
+def until_utc(value, tz):
+    """UNTIL в UTC: dateutil требует его, когда начало события задано с часовым поясом,
+    а Яндекс иногда отдаёт UNTIL местным временем или просто датой"""
+    if value.endswith("Z"):
+        return value
+
+    until = isoparse(value)
+    if "T" not in value:  # только дата — повторения включительно по этот день
+        until = until.replace(hour=23, minute=59, second=59)
+    if until.tzinfo is None:
+        until = tz.localize(until)
+    return until.astimezone(pytz.utc).strftime("%Y%m%dT%H%M%SZ")
 
 
 def message_form(k, event):
     txt = ""
 
     if k:
-        txt += f"-------\n"
-        txt += f"<b>{k}. {event['name']}</b>\n"
+        txt += "-------\n"
+        txt += f"<b>{k}. {escape(str(event['name']))}</b>\n"
     else:
-        txt += f"<b>{event['name']}</b>\n"
+        txt += f"<b>{escape(str(event['name']))}</b>\n"
 
-    txt += f"<b>Описание:</b> {event['desc']}\n"
-    txt += f"<b>Организатор:</b> {event['org']}\n\n"
-    txt += f"<b>Начало: {event['datetime'][0].strftime('%H:%M - %d.%m.%Y года')}</b>\n"
-    txt += f"<b>Конец: {event['datetime'][1].strftime('%H:%M - %d.%m.%Y года')}</b>\n"
+    # пустые описание и организатора не показываем
+    if event["desc"]:
+        txt += f"<b>Описание:</b> {escape(event['desc'])}\n"
+    if event["org"]:
+        txt += f"<b>Организатор:</b> {escape(event['org'])}\n"
+
+    # события всегда сегодняшние, поэтому дата не нужна — только время
+    start, end = event["datetime"]
+    if event["all_day"]:
+        txt += "\n<b>Весь день</b>\n"
+    elif end.date() != start.date():
+        txt += f"\n<b>{start.strftime('%H:%M')} — {end.strftime('%d.%m %H:%M')}</b>\n"
+    else:
+        txt += f"\n<b>{start.strftime('%H:%M')} — {end.strftime('%H:%M')}</b>\n"
 
     return txt
 
