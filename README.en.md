@@ -44,7 +44,7 @@ cp .env.example .env      # BOT_TOKEN from @BotFather
 docker compose up -d
 ```
 
-Prebuilt image: `docker pull ghcr.io/edeev/y.calendarkin` or `docker pull dcr.deev.su/edeev/y.calendarkin`.
+Prebuilt image: `docker pull ghcr.io/edeev/y.calendarkin` or `docker pull git.deev.su/edeev/y.calendarkin`.
 PostgreSQL tables are created on first start. Data from the old version (SQLite `users.db` and `clock.db`)
 is moved by `python scripts/migrate_sqlite.py --sqlite-dir path/to/db --dsn postgresql://…`.
 
@@ -73,7 +73,7 @@ ruff check --select E9,F code tests && pytest
 
 The tests (storage on PostgreSQL from `TEST_DATABASE_URL`) cover calendar parsing: today's events, recurrences, `UNTIL` in different formats, link
 validation and the notification text. The Docker image is built on `v*` tags and published to GitHub
-Packages and `dcr.deev.su`.
+Packages and `git.deev.su`.
 
 ## License
 

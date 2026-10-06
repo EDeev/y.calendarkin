@@ -55,7 +55,7 @@ cp .env.example .env      # BOT_TOKEN от @BotFather
 docker compose up -d
 ```
 
-Готовый образ: `docker pull ghcr.io/edeev/y.calendarkin` или `docker pull dcr.deev.su/edeev/y.calendarkin`.
+Готовый образ: `docker pull ghcr.io/edeev/y.calendarkin` или `docker pull git.deev.su/edeev/y.calendarkin`.
 Таблицы в PostgreSQL создаются при первом запуске. Данные старой версии (SQLite `users.db` и `clock.db`)
 переносит `python scripts/migrate_sqlite.py --sqlite-dir путь/к/db --dsn postgresql://…`.
 
@@ -85,7 +85,7 @@ ruff check --select E9,F code tests && pytest
 
 Тесты (хранилище — на PostgreSQL из `TEST_DATABASE_URL`) проверяют разбор календаря: события на сегодня, повторения, `UNTIL` в разных форматах, проверку
 ссылки и текст уведомления. Docker-образ собирается по тегу `v*` и публикуется в GitHub Packages и
-`dcr.deev.su`.
+`git.deev.su`.
 
 ## Лицензия
 
