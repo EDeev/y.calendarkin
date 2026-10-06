@@ -5,11 +5,28 @@ services:
     env_file: .env
     environment:
       TZ: Europe/Moscow
+      DATABASE_URL: postgresql://yacal:yacal@db:5432/yacal
     volumes:
       - icals:/app/data/icals
-      - db:/app/db
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: yacal
+      POSTGRES_PASSWORD: yacal
+      POSTGRES_DB: yacal
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U yacal"]
+      interval: 5s
+      retries: 10
     restart: unless-stopped
 
 volumes:
   icals:
-  db:
+  pgdata:

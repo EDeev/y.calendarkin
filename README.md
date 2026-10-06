@@ -11,7 +11,7 @@ Telegram-бот, который присылает уведомления о с�
 
 **Статус:** личный проект, поддерживается · бот [@calendarkin_ybot](https://t.me/calendarkin_ybot)
 
-**Стек:** Python 3.12 · aiogram 3 · aiohttp · icalendar · python-dateutil · pytz · SQLite · Docker
+**Стек:** Python 3.12 · aiogram 3 · aiohttp · icalendar · python-dateutil · pytz · PostgreSQL · Docker
 
 ## Возможности
 
@@ -56,9 +56,11 @@ docker compose up -d
 ```
 
 Готовый образ: `docker pull ghcr.io/edeev/y.calendarkin` или `docker pull dcr.deev.su/edeev/y.calendarkin`.
-Базы SQLite создаются при первом запуске.
+Таблицы в PostgreSQL создаются при первом запуске. Данные старой версии (SQLite `users.db` и `clock.db`)
+переносит `python scripts/migrate_sqlite.py --sqlite-dir путь/к/db --dsn postgresql://…`.
 
-Без Docker: Python 3.12, `pip install -r requirements.txt`, затем `cd code && BOT_TOKEN=… python bot.py`.
+Без Docker: Python 3.10+, PostgreSQL, `pip install -r requirements.txt`, затем
+`cd code && BOT_TOKEN=… DATABASE_URL=postgresql://… python bot.py`.
 
 ## Как устроено
 
@@ -66,7 +68,8 @@ docker compose up -d
 code/bot.py        запуск и два фоновых цикла: проверка событий раз в минуту, обновление календарей
 code/handlers.py   команды и приём ссылки
 code/script.py     проверка ссылки, скачивание, разбор iCal и повторений, текст уведомления
-code/sql.py        пользователи, подписки и настройки напоминаний (SQLite)
+code/sql.py        пользователи, подписки и настройки напоминаний (PostgreSQL)
+scripts/           перенос данных из SQLite
 ```
 
 Принимаются только ссылки `https://calendar.yandex.*`: бот не скачивает файлы по произвольным адресам.
@@ -80,7 +83,7 @@ pip install -r requirements-dev.txt
 ruff check --select E9,F code tests && pytest
 ```
 
-Тесты проверяют разбор календаря: события на сегодня, повторения, `UNTIL` в разных форматах, проверку
+Тесты (хранилище — на PostgreSQL из `TEST_DATABASE_URL`) проверяют разбор календаря: события на сегодня, повторения, `UNTIL` в разных форматах, проверку
 ссылки и текст уведомления. Docker-образ собирается по тегу `v*` и публикуется в GitHub Packages и
 `dcr.deev.su`.
 

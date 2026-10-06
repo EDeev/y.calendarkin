@@ -12,7 +12,7 @@ bot speaks Russian.
 
 **Status:** personal project, maintained · bot [@calendarkin_ybot](https://t.me/calendarkin_ybot)
 
-**Stack:** Python 3.12 · aiogram 3 · aiohttp · icalendar · python-dateutil · pytz · SQLite · Docker
+**Stack:** Python 3.12 · aiogram 3 · aiohttp · icalendar · python-dateutil · pytz · PostgreSQL · Docker
 
 ## Features
 
@@ -45,9 +45,11 @@ docker compose up -d
 ```
 
 Prebuilt image: `docker pull ghcr.io/edeev/y.calendarkin` or `docker pull dcr.deev.su/edeev/y.calendarkin`.
-The SQLite databases are created on first start.
+PostgreSQL tables are created on first start. Data from the old version (SQLite `users.db` and `clock.db`)
+is moved by `python scripts/migrate_sqlite.py --sqlite-dir path/to/db --dsn postgresql://…`.
 
-Without Docker: Python 3.12, `pip install -r requirements.txt`, then `cd code && BOT_TOKEN=… python bot.py`.
+Without Docker: Python 3.10+, PostgreSQL, `pip install -r requirements.txt`, then
+`cd code && BOT_TOKEN=… DATABASE_URL=postgresql://… python bot.py`.
 
 ## How it works
 
@@ -55,7 +57,8 @@ Without Docker: Python 3.12, `pip install -r requirements.txt`, then `cd code &&
 code/bot.py        entry point and two background loops: event checks every minute, calendar refresh
 code/handlers.py   commands and receiving the link
 code/script.py     link validation, download, iCal and recurrence parsing, notification text
-code/sql.py        users, subscriptions and reminder settings (SQLite)
+code/sql.py        users, subscriptions and reminder settings (PostgreSQL)
+scripts/           migration from SQLite
 ```
 
 Only `https://calendar.yandex.*` links are accepted, so the bot never downloads from arbitrary addresses.
@@ -68,7 +71,7 @@ pip install -r requirements-dev.txt
 ruff check --select E9,F code tests && pytest
 ```
 
-The tests cover calendar parsing: today's events, recurrences, `UNTIL` in different formats, link
+The tests (storage on PostgreSQL from `TEST_DATABASE_URL`) cover calendar parsing: today's events, recurrences, `UNTIL` in different formats, link
 validation and the notification text. The Docker image is built on `v*` tags and published to GitHub
 Packages and `dcr.deev.su`.
 

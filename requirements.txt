@@ -3,3 +3,4 @@ aiohttp==3.13.2
 icalendar==6.3.2
 python-dateutil==2.9.0.post0
 pytz==2025.2
+psycopg[binary,pool]==3.3.6

@@ -10,11 +10,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY code/ code/
 COPY data/photo_edit_alarm.jpg data/
 RUN useradd --create-home --uid 1000 app \
-    && mkdir -p data/icals db \
+    && mkdir -p data/icals \
     && chown -R app:app /app
 USER app
-VOLUME ["/app/data/icals", "/app/db"]
+VOLUME ["/app/data/icals"]
 
-# пути к данным в коде — относительно папки code/ (../data, ../db)
+# пути к данным в коде — относительно папки code/ (../data)
 WORKDIR /app/code
 CMD ["python", "bot.py"]
