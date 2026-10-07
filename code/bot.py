@@ -3,7 +3,8 @@ import logging
 from datetime import datetime, time
 
 from init import bot, dp, du, dc
-from script import delta_time, download_ical, dt_now, message_form, text_ical
+import changes
+from script import delta_time, download_ical, dt_now, message_form, read_ical, text_ical
 from handlers import router
 
 
@@ -87,11 +88,22 @@ async def update(wait_for):
 
         for (user_id,) in du.all_users():
             try:
-                if du.url_exists(user_id) and du.get_status(user_id):
-                    await download_ical(du.get_url(user_id), user_id)
+                if not (du.url_exists(user_id) and du.get_status(user_id)):
+                    continue
+                old = read_ical(user_id)
+                new = await download_ical(du.get_url(user_id), user_id)
             except Exception as err:
                 # при сбое остаётся прошлая версия календаря
                 logging.warning("Не удалось обновить календарь пользователя %s: %s", user_id, err)
+                continue
+
+            try:
+                if old and old != new and dc.clock_exists(user_id) and dc.get_changes(user_id):
+                    text = changes.report(old, new, du.get_tz(user_id))
+                    if text:
+                        await send(str(du.get_first_user_id(user_id)), text)
+            except Exception:
+                logging.exception("Ошибка уведомления об изменениях пользователя %s", user_id)
 
 
 async def main() -> None:

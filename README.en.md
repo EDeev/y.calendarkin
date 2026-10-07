@@ -21,6 +21,7 @@ bot speaks Russian.
 - A day summary at 8:00 in the calendar's time zone (`/daily`)
 - Two reminders before an event: 15 and 5 minutes by default, changed with `/edit_alarm`
 - A message when an event starts (`/moment`)
+- A notification when an event is added, or an upcoming one is deleted or moved (`/changes`)
 - The calendar is refreshed every 13 minutes; if a refresh fails, the previous version stays
 
 ## Commands
@@ -31,6 +32,7 @@ bot speaks Russian.
 | `/list` | today's events |
 | `/daily` | toggle the morning summary |
 | `/moment` | toggle the message at event start |
+| `/changes` | toggle notifications about added, deleted and moved events |
 | `/get_alarm`, `/edit_alarm` | view and change reminder times |
 | `/stop_alarm` | toggle the second reminder |
 | `/notif` | pause or resume all notifications |
@@ -55,6 +57,7 @@ Without Docker: Python 3.10+, PostgreSQL, `pip install -r requirements.txt`, the
 
 ```
 code/bot.py        entry point and two background loops: event checks every minute, calendar refresh
+code/changes.py    compares the old and new download: added, deleted and moved events
 code/handlers.py   commands and receiving the link
 code/script.py     link validation, download, iCal and recurrence parsing, notification text
 code/sql.py        users, subscriptions and reminder settings (PostgreSQL)
@@ -72,7 +75,7 @@ ruff check --select E9,F code tests && pytest
 ```
 
 The tests (storage on PostgreSQL from `TEST_DATABASE_URL`) cover calendar parsing: today's events, recurrences, `UNTIL` in different formats, link
-validation and the notification text. The Docker image is built on `v*` tags and published to GitHub
+validation, the notification text and change detection between downloads. The Docker image is built on `v*` tags and published to GitHub
 Packages and `git.deev.su`.
 
 ## License
