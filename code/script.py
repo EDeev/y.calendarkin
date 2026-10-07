@@ -28,7 +28,7 @@ def parse_ical_url(url):
 
 
 async def download_ical(url, user_id):
-    """Скачивает календарь, проверяет, что это iCal, и только потом заменяет старый файл"""
+    """Скачивает календарь, проверяет, что это iCal, и только потом заменяет старый файл; возвращает содержимое"""
     timeout = aiohttp.ClientTimeout(total=30)
     async with aiohttp.ClientSession(timeout=timeout) as session:
         async with session.get(url, allow_redirects=False) as response:
@@ -42,6 +42,16 @@ async def download_ical(url, user_id):
     with open(path_new, "wb") as f:
         f.write(data)
     os.replace(path_new, f"{ICAL_DIR}/{user_id}.ics")
+    return data
+
+
+def read_ical(user_id):
+    """Сохранённая выгрузка календаря или None"""
+    try:
+        with open(f"{ICAL_DIR}/{user_id}.ics", "rb") as f:
+            return f.read()
+    except FileNotFoundError:
+        return None
 
 
 def text_ical(user_id, tz):

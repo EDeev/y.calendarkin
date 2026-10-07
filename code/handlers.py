@@ -58,7 +58,8 @@ async def commands(call: CallbackQuery) -> None:
                                    '<b>/list</b> - список событий календаря, запланированных на сегодняшний день\n'
                                    '<b>/notif</b> - команда, отключающая рассылку уведомлений, даже при наличии событий в календаре\n'
                                    '<b>/daily</b> - оповещение в 8 утра по вашему часовому поясу со списком событий на день\n'
-                                   '<b>/moment</b> - напоминание, приходящее в момент начала события\n\n'
+                                   '<b>/moment</b> - напоминание, приходящее в момент начала события\n'
+                                   '<b>/changes</b> - уведомления о новых, удалённых и перенесённых событиях\n\n'
                                    '<b>/get_alarm</b> - информация о времени на которое настроены оповещения\n'
                                    '<b>/edit_alarm</b> - изменение времени оповещений\n'
                                    '<b>/stop_alarm</b> - команда, отключающая второе оповещение о событии\n\n'
@@ -144,6 +145,18 @@ async def moment_up(msg: Message) -> None:
         else: await msg.answer("Уведомления в момент события включены!")
 
         dc.update_start(user_id)
+    else: await msg.answer(NO_LINK)
+
+
+@router.message(Command('changes'))
+async def changes_up(msg: Message) -> None:
+    user_id = user_id_of(msg)
+
+    if dc.clock_exists(user_id):
+        if dc.get_changes(user_id): await msg.answer("Уведомления об изменениях в календаре выключены!")
+        else: await msg.answer("Уведомления об изменениях в календаре включены!")
+
+        dc.update_changes(user_id)
     else: await msg.answer(NO_LINK)
 
 

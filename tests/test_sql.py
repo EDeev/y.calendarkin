@@ -37,6 +37,9 @@ def test_users_and_alarms(pool):
     dc.update_alarm1(uid, 30)
     dc.update_daily(uid)
     assert dc.get_alarm(uid) == (30, 5) and dc.get_daily(uid) is True
+    assert dc.get_changes(uid) is True
+    dc.update_changes(uid)
+    assert dc.get_changes(uid) is False
     du.delete_url(uid)
     assert not du.url_exists(uid)
     assert du.all_users() == [(uid,)]
@@ -65,5 +68,6 @@ def test_migration(pool, tmp_path):
     du, dc = Users(pool), Clock(pool)
     assert du.get_user_id(555) == 5  # внутренний номер сохранён — на него ссылаются файлы календарей
     assert dc.get_alarm(5) == (20, 10) and dc.get_daily(5) is True and dc.get_start(5) is False
+    assert dc.get_changes(5) is True  # новая настройка включена и у перенесённых пользователей
     du.add_user(777)
     assert du.get_user_id(777) == 6

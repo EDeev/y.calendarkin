@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS alarms (
     alarm_2  INTEGER,
     status_2 BOOLEAN NOT NULL DEFAULT TRUE
 );
+ALTER TABLE alarms ADD COLUMN IF NOT EXISTS changes BOOLEAN NOT NULL DEFAULT TRUE;
 """
 
 
@@ -132,6 +133,10 @@ class Clock(_Base):
     def get_status2(self, user_id):
         return self._one("SELECT status_2 FROM alarms WHERE user_id = %s", (user_id,))
 
+    def get_changes(self, user_id):
+        """Присылать ли уведомления о новых, удалённых и перенесённых событиях"""
+        return self._one("SELECT changes FROM alarms WHERE user_id = %s", (user_id,))
+
     # ПЕРЕКЛЮЧАТЕЛИ
     def update_daily(self, user_id):
         self._run("UPDATE alarms SET daily = NOT daily WHERE user_id = %s", (user_id,))
@@ -147,3 +152,6 @@ class Clock(_Base):
 
     def update_status2(self, user_id):
         self._run("UPDATE alarms SET status_2 = NOT status_2 WHERE user_id = %s", (user_id,))
+
+    def update_changes(self, user_id):
+        self._run("UPDATE alarms SET changes = NOT changes WHERE user_id = %s", (user_id,))
